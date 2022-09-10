@@ -1,125 +1,147 @@
-// import 'package:cloud_firestore/cloud_firestore.dart';
-// import 'package:cloud_firestore/cloud_firestore.dart';
-// import 'package:firebase_auth/firebase_auth.dart';
-
-// import 'package:flutter/material.dart';
-
-// import '/Screens/login_screen.dart';
-// import '/services/firebase_auth_service.dart';
-// import '/model/user_model.dart';
-// import 'package:firedart/firedart.dart';
-
-// import 'package:chat_extension/Screens/login_screen.dart';
-// import 'package:chat_extension/model/user_model.dart';
-// import 'package:cloud_firestore/cloud_firestore.dart';
-// import 'package:firebase_auth/firebase_auth.dart';
-// import 'package:flutter/material.dart';
-
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_chat_desktop/Screens/login_screen.dart';
-import 'package:flutter_chat_desktop/Screens/search.dart';
-import 'package:flutter_chat_desktop/model/user_model.dart';
 
-class HomeScreen extends StatefulWidget {
-  const HomeScreen({Key? key}) : super(key: key);
+import '/helper/authenticate.dart';
+import '/helper/constants.dart';
+import '/helper/helperfunctions.dart';
+import '/helper/theme.dart';
+import '/services/auth.dart';
+import '/services/database.dart';
+import '/Screens/chat.dart';
+import '/Screens/search.dart';
+import 'package:flutter/material.dart';
 
+class ChatRoom extends StatefulWidget {
   @override
-  _HomeScreenState createState() => _HomeScreenState();
+  _ChatRoomState createState() => _ChatRoomState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
-  User? user = FirebaseAuth.instance.currentUser;
-  UserModel loggedInUser = UserModel();
+class _ChatRoomState extends State<ChatRoom> {
+  Stream? chatRooms;
+
+  Widget chatRoomsList() {
+    return StreamBuilder(
+      stream: chatRooms,
+      builder: (context, snapshot) {
+        return snapshot.hasData
+            ? ListView.builder(
+                itemCount: snapshot.data.documents.length,
+                shrinkWrap: true,
+                itemBuilder: (context, index) {
+                  return ChatRoomsTile(
+                    userName: snapshot.data.documents[index].data['chatRoomId']
+                        .toString()
+                        .replaceAll("_", "")
+                        .replaceAll(Constants.myName, ""),
+                    chatRoomId:
+                        snapshot.data.documents[index].data["chatRoomId"],
+                  );
+                })
+            : Container();
+      },
+    );
+  }
 
   @override
   void initState() {
+    // getUserInfogetChats();
     super.initState();
-    // FirebaseFirestore.instance
-    //     .collection("users")
-    //     .doc(user!.uid)
-    //     .get()
-    //     .then((value) {
-    //   loggedInUser = UserModel.fromMap(value.data());
-    //   setState(() {});
-    // });
   }
+
+  // getUserInfogetChats() async {
+  //   Constants.myName = await HelperFunctions.getUserNameSharedPreference();
+  //   DatabaseMethods().getUserChats(Constants.myName).then((snapshots) {
+  //     setState(() {
+  //       chatRooms = snapshots;
+  //       print(
+  //           "we got the data + ${chatRooms.toString()} this is name  ${Constants.myName}");
+  //     });
+  //   });
+  // }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Chat"),
+        title: Icon(Icons.logout),
+        elevation: 0.0,
+        centerTitle: false,
         actions: [
           GestureDetector(
             onTap: () {
-              logout(context);
+              // AuthService().signOut();
+              Navigator.pushReplacement(context,
+                  MaterialPageRoute(builder: (context) => LoginScreen()));
             },
             child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: const Icon(Icons.logout)),
+                padding: EdgeInsets.symmetric(horizontal: 16),
+                child: Icon(Icons.exit_to_app)),
           )
         ],
-        centerTitle: true,
+      ),
+      body: Container(
+        child: chatRoomsList(),
       ),
       floatingActionButton: FloatingActionButton(
+        child: Icon(Icons.search),
         onPressed: () {
           Navigator.push(
-              context, MaterialPageRoute(builder: (context) => SearchScreen()));
+              context, MaterialPageRoute(builder: (context) => Search()));
         },
-        child: const Icon(Icons.search),
-      ),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: <Widget>[
-              const SizedBox(
-                height: 150,
-                child: Icon(
-                  Icons.account_box_outlined,
-                  size: 159,
-                  color: Colors.redAccent,
-                ),
-              ),
-              const Text(
-                "Welcome Back",
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(
-                height: 10,
-              ),
-              Text("${loggedInUser.firstName} ${loggedInUser.secondName}",
-                  style: const TextStyle(
-                    color: Colors.black54,
-                    fontWeight: FontWeight.w500,
-                  )),
-              Text("${loggedInUser.email}",
-                  style: const TextStyle(
-                    color: Colors.black54,
-                    fontWeight: FontWeight.w500,
-                  )),
-              const SizedBox(
-                height: 15,
-              ),
-              ActionChip(
-                  label: const Text("Logout"),
-                  onPressed: () {
-                    logout(context);
-                  }),
-            ],
-          ),
-        ),
       ),
     );
   }
+}
 
-  // the logout function
-  Future<void> logout(BuildContext context) async {
-    await FirebaseAuth.instance.signOut();
-    Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const LoginScreen()));
+class ChatRoomsTile extends StatelessWidget {
+  final String userName;
+  final String chatRoomId;
+
+  const ChatRoomsTile(
+      {super.key, required this.userName, required this.chatRoomId});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (context) => Chat(
+                      chatRoomId: chatRoomId,
+                    )));
+      },
+      child: Container(
+        color: Colors.black26,
+        padding: EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+        child: Row(
+          children: [
+            Container(
+              height: 30,
+              width: 30,
+              decoration: BoxDecoration(
+                  color: CustomTheme.colorAccent,
+                  borderRadius: BorderRadius.circular(30)),
+              child: Text(userName.substring(0, 1),
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontFamily: 'OverpassRegular',
+                      fontWeight: FontWeight.w300)),
+            ),
+            SizedBox(
+              width: 12,
+            ),
+            Text(userName,
+                textAlign: TextAlign.start,
+                style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontFamily: 'OverpassRegular',
+                    fontWeight: FontWeight.w300))
+          ],
+        ),
+      ),
+    );
   }
 }
